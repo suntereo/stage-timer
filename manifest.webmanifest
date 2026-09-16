@@ -2,7 +2,7 @@
   "name": "Stage Timer",
   "short_name": "Stage Timer",
   "description": "Count-up speech timer with green, amber and red signals and audio cues.",
-  "start_url": "./index.html",
+  "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "orientation": "any",

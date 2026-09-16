@@ -1,10 +1,9 @@
 /* Stage Timer service worker.
    Bump CACHE whenever you change index.html so phones pick up the new version. */
-var CACHE = "stage-timer-v1";
+var CACHE = "stage-timer-v2";
 
 var SHELL = [
   "./",
-  "./index.html",
   "./manifest.webmanifest",
   "./icons/icon-192.png",
   "./icons/icon-512.png",
@@ -46,13 +45,19 @@ self.addEventListener("fetch", function(e){
       if(hit) return hit;
       return fetch(req).then(function(res){
         if(res && (res.ok || res.type === "opaque") && (isFont || url.origin === self.location.origin)){
-          var copy = res.clone();
-          caches.open(CACHE).then(function(c){ c.put(req, copy).catch(function(){}); });
+          // Safari rejects a navigation served from cache if the stored response was a
+          // redirect (e.g. /index.html -> /), so store a plain copy without that flag.
+          var copy = res.redirected
+            ? res.clone().blob().then(function(b){ return new Response(b, { status: res.status, statusText: res.statusText, headers: res.headers }); })
+            : Promise.resolve(res.clone());
+          copy.then(function(r){
+            caches.open(CACHE).then(function(c){ c.put(req, r).catch(function(){}); });
+          }).catch(function(){});
         }
         return res;
       }).catch(function(){
         // Offline and not cached: for a page request, fall back to the app shell.
-        if(req.mode === "navigate") return caches.match("./index.html");
+        if(req.mode === "navigate") return caches.match("./");
         return new Response("", { status: 504, statusText: "Offline" });
       });
     })
