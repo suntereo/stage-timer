@@ -30,6 +30,22 @@ you silence it. No accounts, no network calls, no data leaves the device.
 Paths are all relative, so the subdirectory URL works without changes. Pages
 serves over HTTPS, which the screen wake lock requires.
 
+## Deploy to Cloudflare Pages
+
+The live site is https://stage-timer-9ml.pages.dev/ (project `stage-timer`,
+direct upload, production branch `main`). Wrangler needs a one-time login:
+
+```
+npx wrangler@latest login
+```
+
+On Windows PowerShell, call `npx.cmd` instead of `npx` if script execution is
+disabled. Then deploy from this folder:
+
+```
+npx wrangler@latest pages deploy . --project-name stage-timer --branch main --commit-dirty=true
+```
+
 ## Install on the iPhone
 
 Open the Pages URL in Safari, tap Share, then Add to Home Screen. It launches
@@ -44,9 +60,9 @@ Edit `index.html`, then bump the version string in `sw.js`:
 var CACHE = "stage-timer-v2";
 ```
 
-Without that bump, installed phones keep serving the cached old copy. After
-pushing, open the app twice: the first launch fetches the new worker, the second
-runs it.
+Without that bump, installed phones keep serving the cached old copy. Commit,
+push, then run the deploy command above. Afterwards open the app twice: the
+first launch fetches the new worker, the second runs it.
 
 ## Known limits
 
