@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#000000">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<title>Stage Timer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0B0D0F;
+    --panel:#171B1F;
+    --panel-2:#212830;
+    --line:#2C343C;
+    --ink:#EDF1F4;
+    --ink-dim:#93A1AC;
+    --green:#0C7A3C;
+    --amber:#D9A006;
+    --red:#BE1622;
+    --focus:#6FD3FF;
+    --ui:"Barlow", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --display:"Barlow Condensed", "Barlow", system-ui, sans-serif;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--ui);font-size:17px;line-height:1.45;overscroll-behavior:none}
+  button{font-family:inherit;font-size:inherit;color:inherit;cursor:pointer}
+  :focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+
+  .setup{max-width:640px;margin:0 auto;padding:max(20px,env(safe-area-inset-top)) 20px calc(28px + env(safe-area-inset-bottom))}
+  h1{font-family:var(--display);font-weight:600;font-size:40px;line-height:1;margin:6px 0 4px}
+  .sub{color:var(--ink-dim);margin:0 0 22px;font-size:15px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:14px}
+  .card h2{font-size:15px;font-weight:600;margin:0 0 10px}
+  .row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:9px 0}
+  .row + .row{border-top:1px solid var(--line)}
+  .row label{color:var(--ink-dim);font-size:15px}
+  .key{display:inline-block;width:11px;height:11px;border-radius:50%;margin-right:9px;vertical-align:1px}
+  .k-green{background:var(--green)}.k-amber{background:var(--amber)}.k-red{background:var(--red)}
+  .num{display:flex;align-items:center;gap:5px}
+  .num input{width:60px;background:var(--panel-2);border:1px solid var(--line);border-radius:9px;color:var(--ink);
+    font-family:var(--display);font-size:25px;font-weight:600;padding:4px 6px;text-align:center;-moz-appearance:textfield}
+  .num input::-webkit-outer-spin-button,.num input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+  .num .colon{color:var(--ink-dim);font-size:20px;padding:0 1px}
+  .presets{display:flex;flex-wrap:wrap;gap:8px}
+  .presets button{background:var(--panel-2);border:1px solid var(--line);border-radius:999px;padding:7px 13px;font-size:14.5px}
+  .presets button:active{background:#2C353D}
+  .switch{position:relative;width:52px;height:31px;border-radius:999px;border:none;background:var(--panel-2);transition:background .18s;flex:none}
+  .switch::after{content:"";position:absolute;top:3px;left:3px;width:25px;height:25px;border-radius:50%;background:#fff;transition:transform .18s}
+  .switch[aria-checked="true"]{background:var(--green)}
+  .switch[aria-checked="true"]::after{transform:translateX(21px)}
+  .ghost{background:none;border:1px solid var(--line);border-radius:9px;padding:7px 12px;font-size:14px;color:var(--ink-dim)}
+  .start{width:100%;margin-top:6px;padding:17px;border:none;border-radius:14px;background:var(--green);color:#fff;font-size:20px;font-weight:600}
+  .start:active{filter:brightness(.92)}
+  .tip{color:var(--ink-dim);font-size:13.5px;margin:16px 2px 0}
+  .tip strong{color:var(--ink);font-weight:600}
+
+  .stage{position:fixed;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;
+    background:#000;color:#fff;transition:background .25s;
+    padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
+  .stage.on{display:flex}
+  .stage[data-stage="green"]{background:var(--green)}
+  .stage[data-stage="amber"]{background:var(--amber);color:#1A1405}
+  .stage[data-stage="red"]{background:var(--red)}
+  .stage.flash{background:#fff !important;color:#000 !important}
+  .clock{font-family:var(--display);font-weight:600;font-variant-numeric:tabular-nums;
+    font-size:min(34vw,44vh);line-height:.86;margin:0}
+  .stage-name{font-weight:600;font-size:min(5.5vw,22px);letter-spacing:.16em;opacity:.8;margin:0 0 min(2vh,8px);min-height:1.2em}
+  .controls{position:absolute;left:0;right:0;bottom:calc(env(safe-area-inset-bottom) + 18px);
+    display:flex;justify-content:center;flex-wrap:wrap;gap:10px;padding:0 14px;opacity:0;transition:opacity .2s;pointer-events:none}
+  .controls.show{opacity:1;pointer-events:auto}
+  .controls button{background:rgba(0,0,0,.3);border:1px solid rgba(255,255,255,.34);color:inherit;
+    border-radius:11px;padding:11px 15px;font-size:16px;font-weight:500;backdrop-filter:blur(3px)}
+  .controls button.loud{background:#fff;color:#111;border-color:#fff;font-weight:600}
+  .hint{position:absolute;top:calc(env(safe-area-inset-top) + 14px);left:0;right:0;text-align:center;font-size:14px;opacity:.5;transition:opacity .4s}
+  .hint.fade{opacity:0}
+  .paused .clock{opacity:.45}
+</style>
+</head>
+<body>
+
+<main class="setup" id="setup">
+  <h1>Stage Timer</h1>
+  <p class="sub">Counts up from zero on a black screen, then turns green, amber and red at the times you set.</p>
+
+  <section class="card">
+    <h2>Signal times</h2>
+    <div class="row" style="padding-top:0">
+      <label><i class="key k-green"></i>Green at</label>
+      <div class="num">
+        <input id="gM" type="number" inputmode="numeric" min="0" max="240" value="5">
+        <span class="colon">:</span>
+        <input id="gS" type="number" inputmode="numeric" min="0" max="59" value="0">
+      </div>
+    </div>
+    <div class="row">
+      <label><i class="key k-amber"></i>Amber at</label>
+      <div class="num">
+        <input id="aM" type="number" inputmode="numeric" min="0" max="240" value="6">
+        <span class="colon">:</span>
+        <input id="aS" type="number" inputmode="numeric" min="0" max="59" value="0">
+      </div>
+    </div>
+    <div class="row">
+      <label><i class="key k-red"></i>Red at</label>
+      <div class="num">
+        <input id="rM" type="number" inputmode="numeric" min="0" max="240" value="7">
+        <span class="colon">:</span>
+        <input id="rS" type="number" inputmode="numeric" min="0" max="59" value="0">
+      </div>
+    </div>
+    <div class="row">
+      <div class="presets" id="presets">
+        <button data-t="60,90,120">1 to 2</button>
+        <button data-t="120,150,180">2 to 3</button>
+        <button data-t="240,300,360">4 to 6</button>
+        <button data-t="300,360,420">5 to 7</button>
+        <button data-t="600,720,900">10 to 15</button>
+        <button data-t="1500,1680,1800">25 to 30</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>Cues</h2>
+    <div class="row" style="padding-top:0">
+      <label for="soundOn">Sound</label>
+      <button class="switch" id="soundOn" role="switch" aria-checked="true" aria-label="Sound"></button>
+    </div>
+    <div class="row">
+      <label for="alarmOn">Red keeps sounding until stopped</label>
+      <button class="switch" id="alarmOn" role="switch" aria-checked="true" aria-label="Red alarm repeats"></button>
+    </div>
+    <div class="row">
+      <label for="flashOn">Flash the screen at each change</label>
+      <button class="switch" id="flashOn" role="switch" aria-checked="false" aria-label="Flash"></button>
+    </div>
+    <div class="row">
+      <label>Hear the cues</label>
+      <span style="display:flex;gap:7px">
+        <button class="ghost" data-test="1">Green</button>
+        <button class="ghost" data-test="2">Amber</button>
+        <button class="ghost" data-test="3">Red</button>
+      </span>
+    </div>
+  </section>
+
+  <button class="start" id="startBtn">Start timer</button>
+  <p class="tip"><strong>On an iPhone:</strong> ringer on and volume up, or the cues stay silent. Tap Share then Add to Home Screen to launch it full-screen without Safari's bars.</p>
+</main>
+
+<div class="stage" id="stage" data-stage="black">
+  <p class="hint" id="hint">Tap for controls</p>
+  <p class="stage-name" id="stageName">&nbsp;</p>
+  <p class="clock" id="clock">0:00</p>
+  <div class="controls" id="controls">
+    <button id="silenceBtn" class="loud" style="display:none">Silence</button>
+    <button id="pauseBtn">Pause</button>
+    <button id="resetBtn">Reset</button>
+    <button id="exitBtn">Done</button>
+  </div>
+</div>
+
+<script>
+(function(){
+  var $ = function(id){ return document.getElementById(id); };
+
+  var S = { g:300, a:360, r:420, soundOn:true, alarmOn:true, flashOn:false };
+  try{ var v = localStorage.getItem("stageTimer.v2"); if(v){ var p = JSON.parse(v); for(var k in S){ if(k in p) S[k] = p[k]; } } }catch(e){}
+  function save(){ try{ localStorage.setItem("stageTimer.v2", JSON.stringify(S)); }catch(e){} }
+
+  function setSwitch(el,on){ el.setAttribute("aria-checked", on ? "true" : "false"); }
+  function fill(){
+    $("gM").value = Math.floor(S.g/60); $("gS").value = S.g%60;
+    $("aM").value = Math.floor(S.a/60); $("aS").value = S.a%60;
+    $("rM").value = Math.floor(S.r/60); $("rS").value = S.r%60;
+  }
+  function num(id,max){ var n = parseInt($(id).value,10); if(isNaN(n)||n<0) n = 0; if(n>max) n = max; return n; }
+  function readForm(){
+    S.g = num("gM",240)*60 + num("gS",59);
+    S.a = num("aM",240)*60 + num("aS",59);
+    S.r = num("rM",240)*60 + num("rS",59);
+    save();
+  }
+  fill();
+  setSwitch($("soundOn"), S.soundOn); setSwitch($("alarmOn"), S.alarmOn); setSwitch($("flashOn"), S.flashOn);
+  ["gM","gS","aM","aS","rM","rS"].forEach(function(id){ $(id).addEventListener("change", readForm); });
+  $("presets").addEventListener("click", function(e){
+    var b = e.target.closest("button"); if(!b) return;
+    var t = b.getAttribute("data-t").split(",");
+    S.g = +t[0]; S.a = +t[1]; S.r = +t[2]; fill(); save();
+  });
+  $("soundOn").addEventListener("click", function(){ S.soundOn = !S.soundOn; setSwitch(this,S.soundOn); save(); if(S.soundOn) unlock(); });
+  $("alarmOn").addEventListener("click", function(){ S.alarmOn = !S.alarmOn; setSwitch(this,S.alarmOn); save(); });
+  $("flashOn").addEventListener("click", function(){ S.flashOn = !S.flashOn; setSwitch(this,S.flashOn); save(); });
+
+  /* ---------- audio ---------- */
+  var ctx = null;
+  function unlock(){
+    try{
+      if(!ctx){ var AC = window.AudioContext || window.webkitAudioContext; if(!AC) return; ctx = new AC(); }
+      if(ctx.state === "suspended") ctx.resume();
+      var g = ctx.createGain(); g.gain.value = 0.0001; g.connect(ctx.destination);
+      var o = ctx.createOscillator(); o.connect(g); o.start(); o.stop(ctx.currentTime + 0.02);
+    }catch(e){}
+  }
+  function note(freq, at, dur, type, peak, glideTo){
+    if(!ctx) return;
+    var t = ctx.currentTime + at;
+    var o = ctx.createOscillator(), g = ctx.createGain();
+    o.type = type; o.frequency.setValueAtTime(freq, t);
+    if(glideTo) o.frequency.linearRampToValueAtTime(glideTo, t + dur);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(peak, t + 0.015);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g); g.connect(ctx.destination);
+    o.start(t); o.stop(t + dur + 0.05);
+  }
+  // green: warm rising two-note chime
+  function cueGreen(){
+    note(523.25, 0,    0.85, "sine", 0.34);
+    note(783.99, 0.18, 0.95, "sine", 0.30);
+    note(1046.5, 0.18, 0.60, "sine", 0.10);
+  }
+  // amber: brighter, sharper triple, clearly a different sound
+  function cueAmber(){
+    for(var i=0;i<3;i++){
+      note(1174.7, i*0.19, 0.16, "triangle", 0.38);
+      note(1567.9, i*0.19, 0.13, "sine", 0.16);
+    }
+  }
+  // red: harsh alternating two-tone klaxon burst
+  function redBurst(){
+    for(var i=0;i<3;i++){
+      note(880, i*0.34,        0.16, "square", 0.42, 660);
+      note(660, i*0.34 + 0.17, 0.16, "square", 0.42, 880);
+    }
+  }
+  var alarmTimer = null;
+  function startAlarm(){
+    if(!S.soundOn) return;
+    unlock(); redBurst();
+    if(!S.alarmOn) return;
+    clearInterval(alarmTimer);
+    alarmTimer = setInterval(function(){ if(ctx && ctx.state === "suspended") ctx.resume(); redBurst(); }, 1400);
+    $("silenceBtn").style.display = "";
+    $("controls").classList.add("show");
+  }
+  function stopAlarm(){
+    clearInterval(alarmTimer); alarmTimer = null;
+    $("silenceBtn").style.display = "none";
+  }
+  document.querySelectorAll("[data-test]").forEach(function(b){
+    b.addEventListener("click", function(){
+      S.soundOn = true; setSwitch($("soundOn"), true); unlock();
+      var k = this.getAttribute("data-test");
+      if(k === "1") cueGreen(); else if(k === "2") cueAmber(); else redBurst();
+    });
+  });
+
+  /* ---------- wake lock ---------- */
+  var lock = null;
+  function keepAwake(on){
+    try{
+      if(on && navigator.wakeLock){ navigator.wakeLock.request("screen").then(function(l){ lock = l; }, function(){}); }
+      else if(lock){ lock.release(); lock = null; }
+    }catch(e){}
+  }
+  document.addEventListener("visibilitychange", function(){
+    if(document.visibilityState === "visible"){
+      if(running && !paused) keepAwake(true);
+      if(alarmTimer && ctx && ctx.state === "suspended") ctx.resume();
+    }
+  });
+
+  /* ---------- timer ---------- */
+  var stageEl = $("stage"), clockEl = $("clock"), nameEl = $("stageName"), controls = $("controls"), hint = $("hint");
+  var startedAt = 0, elapsedWhenPaused = 0, running = false, paused = false, fired = {}, ticker = null;
+
+  function fmt(sec){ var m = Math.floor(sec/60), s = Math.floor(sec%60); return m + ":" + (s<10?"0"+s:s); }
+  function flash(){
+    if(!S.flashOn) return;
+    stageEl.classList.add("flash");
+    setTimeout(function(){ stageEl.classList.remove("flash"); }, 240);
+  }
+  function elapsed(){ return paused ? elapsedWhenPaused : (Date.now() - startedAt)/1000; }
+
+  function render(){
+    var e = elapsed(), stage = "black", label = "\u00a0";
+    if(e >= S.r){ stage = "red"; label = "STOP"; }
+    else if(e >= S.a){ stage = "amber"; label = "WRAP UP"; }
+    else if(e >= S.g){ stage = "green"; label = "IN TIME"; }
+
+    if(stage === "green" && !fired.g){ fired.g = true; if(S.soundOn){ unlock(); cueGreen(); } flash(); }
+    if(stage === "amber" && !fired.a){ fired.a = true; fired.g = true; if(S.soundOn){ unlock(); cueAmber(); } flash(); }
+    if(stage === "red" && !fired.r){ fired.r = true; fired.a = fired.g = true; startAlarm(); flash(); }
+
+    stageEl.setAttribute("data-stage", stage);
+    nameEl.innerHTML = label;
+    clockEl.textContent = fmt(e);
+  }
+
+  function start(){
+    readForm();
+    startedAt = Date.now(); elapsedWhenPaused = 0;
+    fired = {}; running = true; paused = false;
+    unlock(); keepAwake(true); stopAlarm();
+    $("setup").style.display = "none";
+    stageEl.classList.add("on"); stageEl.classList.remove("paused");
+    $("pauseBtn").textContent = "Pause";
+    hint.classList.remove("fade");
+    setTimeout(function(){ hint.classList.add("fade"); }, 3200);
+    render();
+    clearInterval(ticker); ticker = setInterval(render, 200);
+  }
+  function stop(){
+    clearInterval(ticker); stopAlarm(); running = false; keepAwake(false);
+    stageEl.classList.remove("on"); $("setup").style.display = "";
+    controls.classList.remove("show");
+  }
+  $("startBtn").addEventListener("click", start);
+  $("exitBtn").addEventListener("click", function(e){ e.stopPropagation(); stop(); });
+  $("silenceBtn").addEventListener("click", function(e){ e.stopPropagation(); stopAlarm(); });
+  $("pauseBtn").addEventListener("click", function(e){
+    e.stopPropagation();
+    if(paused){ startedAt = Date.now() - elapsedWhenPaused*1000; paused = false; keepAwake(true); this.textContent = "Pause"; stageEl.classList.remove("paused"); }
+    else { elapsedWhenPaused = (Date.now() - startedAt)/1000; paused = true; this.textContent = "Resume"; stageEl.classList.add("paused"); }
+    render();
+  });
+  $("resetBtn").addEventListener("click", function(e){
+    e.stopPropagation(); stopAlarm();
+    startedAt = Date.now(); elapsedWhenPaused = 0; fired = {};
+    if(paused){ paused = false; $("pauseBtn").textContent = "Pause"; stageEl.classList.remove("paused"); }
+    render();
+  });
+  stageEl.addEventListener("click", function(){
+    controls.classList.toggle("show");
+    if(controls.classList.contains("show") && !alarmTimer){
+      setTimeout(function(){ if(!alarmTimer) controls.classList.remove("show"); }, 6000);
+    }
+  });
+})();
+</script>
+<script>
+if("serviceWorker" in navigator){
+  window.addEventListener("load", function(){
+    navigator.serviceWorker.register("sw.js").catch(function(){});
+  });
+}
+</script>
+</body>
+</html>
