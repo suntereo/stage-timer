@@ -61,7 +61,7 @@ phone in airplane mode too.
 Edit `index.html`, then bump the version string in `sw.js`:
 
 ```js
-var CACHE = "stage-timer-v3";
+var CACHE = "stage-timer-v4";
 ```
 
 Without that bump, installed phones keep serving the cached old copy. Commit,
