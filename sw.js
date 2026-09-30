@@ -1,6 +1,6 @@
 /* Stage Timer service worker.
    Bump CACHE whenever you change index.html so phones pick up the new version. */
-var CACHE = "stage-timer-v2";
+var CACHE = "stage-timer-v3";
 
 var SHELL = [
   "./",

@@ -4,6 +4,10 @@ A single-page count-up speech timer. Black screen, then green, amber and red at
 times you set, with a distinct sound at each and a repeating alarm at red until
 you silence it. No accounts, no network calls, no data leaves the device.
 
+A "Count down instead of up" switch flips it to a countdown: set the speech
+length, and how much time should be left at green and at amber. Red comes at
+zero, and the clock keeps counting overtime past it (−0:05).
+
 ## Files
 
 - `index.html` — the whole app: markup, styles, logic, sounds
@@ -57,7 +61,7 @@ phone in airplane mode too.
 Edit `index.html`, then bump the version string in `sw.js`:
 
 ```js
-var CACHE = "stage-timer-v2";
+var CACHE = "stage-timer-v3";
 ```
 
 Without that bump, installed phones keep serving the cached old copy. Commit,

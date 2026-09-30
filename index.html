@@ -80,6 +80,7 @@
   .controls button.loud{background:#fff;color:#111;border-color:#fff;font-weight:600}
   .hint{position:absolute;top:calc(env(safe-area-inset-top) + 14px);left:0;right:0;text-align:center;font-size:14px;opacity:.5;transition:opacity .4s}
   .hint.fade{opacity:0}
+  .clock.long{font-size:min(28vw,44vh)}
   .paused .clock{opacity:.45}
 </style>
 </head>
@@ -87,28 +88,32 @@
 
 <main class="setup" id="setup">
   <h1>Stage Timer</h1>
-  <p class="sub">Counts up from zero on a black screen, then turns green, amber and red at the times you set.</p>
+  <p class="sub" id="sub">Counts up from zero on a black screen, then turns green, amber and red at the times you set.</p>
 
   <section class="card">
     <h2>Signal times</h2>
     <div class="row" style="padding-top:0">
-      <label><i class="key k-green"></i>Green at</label>
+      <label for="countDown">Count down instead of up</label>
+      <button class="switch" id="countDown" role="switch" aria-checked="false" aria-label="Count down"></button>
+    </div>
+    <div class="row" id="rowG">
+      <label id="lG"><i class="key k-green"></i>Green at</label>
       <div class="num">
         <input id="gM" type="number" inputmode="numeric" min="0" max="240" value="5">
         <span class="colon">:</span>
         <input id="gS" type="number" inputmode="numeric" min="0" max="59" value="0">
       </div>
     </div>
-    <div class="row">
-      <label><i class="key k-amber"></i>Amber at</label>
+    <div class="row" id="rowA">
+      <label id="lA"><i class="key k-amber"></i>Amber at</label>
       <div class="num">
         <input id="aM" type="number" inputmode="numeric" min="0" max="240" value="6">
         <span class="colon">:</span>
         <input id="aS" type="number" inputmode="numeric" min="0" max="59" value="0">
       </div>
     </div>
-    <div class="row">
-      <label><i class="key k-red"></i>Red at</label>
+    <div class="row" id="rowR">
+      <label id="lR"><i class="key k-red"></i>Red at</label>
       <div class="num">
         <input id="rM" type="number" inputmode="numeric" min="0" max="240" value="7">
         <span class="colon">:</span>
@@ -171,24 +176,45 @@
 (function(){
   var $ = function(id){ return document.getElementById(id); };
 
-  var S = { g:300, a:360, r:420, soundOn:true, alarmOn:true, flashOn:false };
+  var S = { g:300, a:360, r:420, soundOn:true, alarmOn:true, flashOn:false, countDown:false };
   try{ var v = localStorage.getItem("stageTimer.v2"); if(v){ var p = JSON.parse(v); for(var k in S){ if(k in p) S[k] = p[k]; } } }catch(e){}
   function save(){ try{ localStorage.setItem("stageTimer.v2", JSON.stringify(S)); }catch(e){} }
 
   function setSwitch(el,on){ el.setAttribute("aria-checked", on ? "true" : "false"); }
+  // In count-down mode the form shows time left (green/amber) and the speech length (red),
+  // but S always stores elapsed seconds, so the timer logic and presets work in both modes.
   function fill(){
-    $("gM").value = Math.floor(S.g/60); $("gS").value = S.g%60;
-    $("aM").value = Math.floor(S.a/60); $("aS").value = S.a%60;
+    var g = S.countDown ? Math.max(0, S.r - S.g) : S.g;
+    var a = S.countDown ? Math.max(0, S.r - S.a) : S.a;
+    $("gM").value = Math.floor(g/60); $("gS").value = g%60;
+    $("aM").value = Math.floor(a/60); $("aS").value = a%60;
     $("rM").value = Math.floor(S.r/60); $("rS").value = S.r%60;
+  }
+  function applyMode(){
+    var down = S.countDown;
+    $("lG").innerHTML = '<i class="key k-green"></i>' + (down ? "Green, time left" : "Green at");
+    $("lA").innerHTML = '<i class="key k-amber"></i>' + (down ? "Amber, time left" : "Amber at");
+    $("lR").innerHTML = down ? "Speech length" : '<i class="key k-red"></i>Red at';
+    $("sub").textContent = down
+      ? "Counts down from the speech length, turns green and amber with the time left you set, and red at zero."
+      : "Counts up from zero on a black screen, then turns green, amber and red at the times you set.";
+    // speech length reads first when counting down
+    var card = $("rowG").parentNode;
+    if(down) card.insertBefore($("rowR"), $("rowG"));
+    else card.insertBefore($("rowR"), $("presets").parentNode);
+    fill();
   }
   function num(id,max){ var n = parseInt($(id).value,10); if(isNaN(n)||n<0) n = 0; if(n>max) n = max; return n; }
   function readForm(){
-    S.g = num("gM",240)*60 + num("gS",59);
-    S.a = num("aM",240)*60 + num("aS",59);
+    var g = num("gM",240)*60 + num("gS",59);
+    var a = num("aM",240)*60 + num("aS",59);
     S.r = num("rM",240)*60 + num("rS",59);
+    S.g = S.countDown ? Math.max(0, S.r - g) : g;
+    S.a = S.countDown ? Math.max(0, S.r - a) : a;
     save();
   }
-  fill();
+  applyMode();
+  setSwitch($("countDown"), S.countDown);
   setSwitch($("soundOn"), S.soundOn); setSwitch($("alarmOn"), S.alarmOn); setSwitch($("flashOn"), S.flashOn);
   ["gM","gS","aM","aS","rM","rS"].forEach(function(id){ $(id).addEventListener("change", readForm); });
   $("presets").addEventListener("click", function(e){
@@ -196,6 +222,7 @@
     var t = b.getAttribute("data-t").split(",");
     S.g = +t[0]; S.a = +t[1]; S.r = +t[2]; fill(); save();
   });
+  $("countDown").addEventListener("click", function(){ readForm(); S.countDown = !S.countDown; setSwitch(this,S.countDown); save(); applyMode(); });
   $("soundOn").addEventListener("click", function(){ S.soundOn = !S.soundOn; setSwitch(this,S.soundOn); save(); if(S.soundOn) unlock(); });
   $("alarmOn").addEventListener("click", function(){ S.alarmOn = !S.alarmOn; setSwitch(this,S.alarmOn); save(); });
   $("flashOn").addEventListener("click", function(){ S.flashOn = !S.flashOn; setSwitch(this,S.flashOn); save(); });
@@ -289,6 +316,15 @@
     stageEl.classList.add("flash");
     setTimeout(function(){ stageEl.classList.remove("flash"); }, 240);
   }
+  // count-down shows time left, rounded up so it reads 1:00 the moment green fires,
+  // then counts the overtime past zero with a minus sign
+  function clockText(e){
+    if(!S.countDown) return fmt(e);
+    var left = S.r - e;
+    if(left > 0) return fmt(Math.ceil(left));
+    var over = Math.floor(-left);
+    return over > 0 ? "\u2212" + fmt(over) : "0:00";
+  }
   function elapsed(){ return paused ? elapsedWhenPaused : (Date.now() - startedAt)/1000; }
 
   function render(){
@@ -303,7 +339,9 @@
 
     stageEl.setAttribute("data-stage", stage);
     nameEl.innerHTML = label;
-    clockEl.textContent = fmt(e);
+    var txt = clockText(e);
+    clockEl.textContent = txt;
+    clockEl.classList.toggle("long", txt.length > 5);
   }
 
   function start(){
