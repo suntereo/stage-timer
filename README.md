@@ -58,15 +58,15 @@ phone in airplane mode too.
 
 ## Shipping a change
 
-Edit `index.html`, then bump the version string in `sw.js`:
+Push to `main`. The GitHub Actions workflow in `.github/workflows/deploy.yml`
+deploys to Cloudflare Pages and stamps the cache version in `sw.js` with the
+commit, so installed phones pick up the new copy. It needs two repo secrets,
+`CLOUDFLARE_API_TOKEN` (Account, Cloudflare Pages, Edit) and
+`CLOUDFLARE_ACCOUNT_ID`; without them the workflow skips the deploy. You can
+also rerun it by hand from the Actions tab.
 
-```js
-var CACHE = "stage-timer-v5";
-```
-
-Without that bump, installed phones keep serving the cached old copy. Commit,
-push, then run the deploy command above. Afterwards open the app twice: the
-first launch fetches the new worker, the second runs it.
+After a deploy, open the app twice: the first launch fetches the new worker,
+the second runs it.
 
 ## Known limits
 
